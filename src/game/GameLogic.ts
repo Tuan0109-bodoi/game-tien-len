@@ -178,12 +178,126 @@ export class GameLogic {
   private isValidMove(cards: Card[]): boolean {
     if (cards.length === 0) return false;
 
-    // If table is empty, any move is valid
-    if (this.gameState.table.length === 0) return true;
+    // If table is empty, any valid combination is allowed
+    if (this.gameState.table.length === 0) {
+      return this.isValidCombination(cards);
+    }
 
-    // TODO: Implement Tiến Lên rules validation
-    // For now, accept any move
+    const tableCards = this.gameState.table;
+
+    // Must play same number of cards
+    if (cards.length !== tableCards.length) return false;
+
+    // Must be valid combination
+    if (!this.isValidCombination(cards)) return false;
+
+    // Must be stronger than table cards
+    return this.isStrongerCombination(cards, tableCards);
+  }
+
+  private isValidCombination(cards: Card[]): boolean {
+    if (cards.length === 0) return false;
+    if (cards.length === 1) return true; // Single card
+
+    // Sort cards by rank for validation
+    const sorted = [...cards].sort((a, b) => this.compareCards(a, b));
+
+    if (cards.length === 2) {
+      // Pair: same rank
+      return sorted[0].rank === sorted[1].rank;
+    }
+
+    if (cards.length === 3) {
+      // Triple: all same rank
+      return sorted[0].rank === sorted[1].rank && sorted[1].rank === sorted[2].rank;
+    }
+
+    // Sequence: consecutive ranks, all same suit or all different suits
+    if (cards.length >= 3) {
+      return this.isSequence(sorted);
+    }
+
+    return false;
+  }
+
+  private isSequence(cards: Card[]): boolean {
+    if (cards.length < 3) return false;
+
+    const rankOrder: Record<Rank, number> = {
+      '3': 0, '4': 1, '5': 2, '6': 3, '7': 4, '8': 5,
+      '9': 6, '10': 7, 'J': 8, 'Q': 9, 'K': 10, 'A': 11, '2': 12,
+    };
+
+    // Check consecutive ranks
+    for (let i = 1; i < cards.length; i++) {
+      if (rankOrder[cards[i].rank] !== rankOrder[cards[i - 1].rank] + 1) {
+        return false;
+      }
+    }
+
     return true;
+  }
+
+  private isStrongerCombination(cards: Card[], tableCards: Card[]): boolean {
+    if (cards.length !== tableCards.length) return false;
+
+    const rankOrder: Record<Rank, number> = {
+      '3': 0, '4': 1, '5': 2, '6': 3, '7': 4, '8': 5,
+      '9': 6, '10': 7, 'J': 8, 'Q': 9, 'K': 10, 'A': 11, '2': 12,
+    };
+
+    const suitOrder: Record<Suit, number> = {
+      'spades': 0, 'clubs': 1, 'diamonds': 2, 'hearts': 3,
+    };
+
+    if (cards.length === 1) {
+      // Single card: compare rank, then suit
+      const cardRank = rankOrder[cards[0].rank];
+      const tableRank = rankOrder[tableCards[0].rank];
+
+      if (cardRank > tableRank) return true;
+      if (cardRank === tableRank) {
+        return suitOrder[cards[0].suit] > suitOrder[tableCards[0].suit];
+      }
+      return false;
+    }
+
+    if (cards.length === 2) {
+      // Pair: compare rank of pair, then highest suit
+      const cardRank = rankOrder[cards[0].rank];
+      const tableRank = rankOrder[tableCards[0].rank];
+
+      if (cardRank > tableRank) return true;
+      if (cardRank === tableRank) {
+        const cardHighSuit = Math.max(suitOrder[cards[0].suit], suitOrder[cards[1].suit]);
+        const tableHighSuit = Math.max(suitOrder[tableCards[0].suit], suitOrder[tableCards[1].suit]);
+        return cardHighSuit > tableHighSuit;
+      }
+      return false;
+    }
+
+    if (cards.length === 3) {
+      // Triple: compare rank only
+      const cardRank = rankOrder[cards[0].rank];
+      const tableRank = rankOrder[tableCards[0].rank];
+      return cardRank > tableRank;
+    }
+
+    // Sequence: compare highest card
+    const cardsSorted = [...cards].sort((a, b) => this.compareCards(a, b));
+    const tableSorted = [...tableCards].sort((a, b) => this.compareCards(a, b));
+
+    const cardHighest = cardsSorted[cardsSorted.length - 1];
+    const tableHighest = tableSorted[tableSorted.length - 1];
+
+    const cardRank = rankOrder[cardHighest.rank];
+    const tableRank = rankOrder[tableHighest.rank];
+
+    if (cardRank > tableRank) return true;
+    if (cardRank === tableRank) {
+      return suitOrder[cardHighest.suit] > suitOrder[tableHighest.suit];
+    }
+    return false;
   }
 
   private checkWinCondition(): void {

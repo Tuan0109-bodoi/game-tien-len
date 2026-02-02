@@ -87,48 +87,48 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Create casino-style table with wooden rail
+    // Create casino-style table with wooden rail - FULL SCREEN
     const graphics = this.make.graphics({ x: 0, y: 0 });
 
-    // Wooden rail border (dark brown)
-    const railWidth = 40;
+    // Wooden rail border (dark brown) - covers entire screen
+    const railWidth = 60;
     graphics.fillStyle(0x3d2817, 1);
     graphics.fillRoundedRect(
-      width / 4 - railWidth,
-      height / 4 - railWidth,
-      width / 2 + railWidth * 2,
-      height / 2 + railWidth * 2,
-      20
+      railWidth,
+      railWidth,
+      width - railWidth * 2,
+      height - railWidth * 2,
+      30
     );
 
     // Inner shadow for rail depth
-    graphics.lineStyle(3, 0x2a1810, 0.8);
+    graphics.lineStyle(4, 0x2a1810, 0.8);
     graphics.strokeRoundedRect(
-      width / 4 - railWidth + 3,
-      height / 4 - railWidth + 3,
-      width / 2 + railWidth * 2 - 6,
-      height / 2 + railWidth * 2 - 6,
-      20
+      railWidth + 4,
+      railWidth + 4,
+      width - railWidth * 2 - 8,
+      height - railWidth * 2 - 8,
+      30
     );
 
-    // Green felt table surface
+    // Green felt table surface - full screen
     graphics.fillStyle(0x1a5f3f, 1);
-    graphics.fillRoundedRect(width / 4, height / 4, width / 2, height / 2, 15);
+    graphics.fillRoundedRect(railWidth + 10, railWidth + 10, width - (railWidth + 10) * 2, height - (railWidth + 10) * 2, 25);
 
-    graphics.generateTexture('table-bg', width / 2 + railWidth * 2, height / 2 + railWidth * 2);
+    graphics.generateTexture('table-bg', width, height);
     graphics.destroy();
 
     this.add.image(width / 2, height / 2, 'table-bg').setDepth(0);
 
-    // Add vignette effect (darker corners)
+    // Add vignette effect (darker corners) - lighter for better performance
     const vignette = this.add.graphics();
     vignette.fillStyle(0x000000, 0);
     vignette.fillRect(0, 0, width, height);
 
-    // Create radial gradient effect manually
-    for (let i = 0; i < 5; i++) {
-      const alpha = 0.15 - (i * 0.03);
-      const size = Math.min(width, height) * (0.3 + i * 0.2);
+    // Simplified vignette - only 3 layers instead of 5
+    for (let i = 0; i < 3; i++) {
+      const alpha = 0.1 - (i * 0.03);
+      const size = Math.min(width, height) * (0.4 + i * 0.25);
       vignette.lineStyle(size, 0x000000, alpha);
       vignette.strokeRect(0, 0, width, height);
     }
@@ -203,9 +203,9 @@ export class GameScene extends Phaser.Scene {
         sprite.setDepth(cardIndex + 10);
         sprite.setInteractive();
 
-        // Add drop shadow for depth
+        // Add subtle drop shadow for depth (lighter for better performance)
         if (sprite.preFX) {
-          sprite.preFX.addShadow(2, 2, 0.06, 1, 0x000000, 6);
+          sprite.preFX.addShadow(1, 1, 0.03, 0.5, 0x000000, 3);
         }
 
         sprite.setData('originalY', cardY);
