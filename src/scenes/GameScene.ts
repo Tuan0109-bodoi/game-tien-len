@@ -87,14 +87,52 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Draw table area - Green felt
+    // Create casino-style table with wooden rail
     const graphics = this.make.graphics({ x: 0, y: 0 });
-    graphics.fillStyle(0x1a5f3f, 0.9);
-    graphics.fillRect(width / 4, height / 4, width / 2, height / 2);
-    graphics.generateTexture('table-bg', width / 2, height / 2);
+
+    // Wooden rail border (dark brown)
+    const railWidth = 40;
+    graphics.fillStyle(0x3d2817, 1);
+    graphics.fillRoundedRect(
+      width / 4 - railWidth,
+      height / 4 - railWidth,
+      width / 2 + railWidth * 2,
+      height / 2 + railWidth * 2,
+      20
+    );
+
+    // Inner shadow for rail depth
+    graphics.lineStyle(3, 0x2a1810, 0.8);
+    graphics.strokeRoundedRect(
+      width / 4 - railWidth + 3,
+      height / 4 - railWidth + 3,
+      width / 2 + railWidth * 2 - 6,
+      height / 2 + railWidth * 2 - 6,
+      20
+    );
+
+    // Green felt table surface
+    graphics.fillStyle(0x1a5f3f, 1);
+    graphics.fillRoundedRect(width / 4, height / 4, width / 2, height / 2, 15);
+
+    graphics.generateTexture('table-bg', width / 2 + railWidth * 2, height / 2 + railWidth * 2);
     graphics.destroy();
 
     this.add.image(width / 2, height / 2, 'table-bg').setDepth(0);
+
+    // Add vignette effect (darker corners)
+    const vignette = this.add.graphics();
+    vignette.fillStyle(0x000000, 0);
+    vignette.fillRect(0, 0, width, height);
+
+    // Create radial gradient effect manually
+    for (let i = 0; i < 5; i++) {
+      const alpha = 0.15 - (i * 0.03);
+      const size = Math.min(width, height) * (0.3 + i * 0.2);
+      vignette.lineStyle(size, 0x000000, alpha);
+      vignette.strokeRect(0, 0, width, height);
+    }
+    vignette.setDepth(5);
 
     // Add table label
     this.add.text(width / 2, height / 2 - 20, 'TABLE', {
@@ -165,6 +203,11 @@ export class GameScene extends Phaser.Scene {
         sprite.setDepth(cardIndex + 10);
         sprite.setInteractive();
 
+        // Add drop shadow for depth
+        if (sprite.preFX) {
+          sprite.preFX.addShadow(2, 2, 0.06, 1, 0x000000, 6);
+        }
+
         sprite.setData('originalY', cardY);
         sprite.setData('originalX', cardX);
         sprite.setData('playerIndex', index);
@@ -195,16 +238,65 @@ export class GameScene extends Phaser.Scene {
 
       this.playerHands.set(index, sprites);
 
-      // Add player name with background
-      const nameText = this.add.text(x, y - 35, player.name, {
-        fontSize: '14px',
+      // Create avatar with metallic gold border
+      const avatarSize = 50;
+      const avatarX = index === 0 ? width / 2 : (index === 1 ? width - 80 : (index === 2 ? width / 2 : 80));
+      const avatarY = index === 0 ? height - 120 : (index === 1 ? height / 2 : (index === 2 ? 100 : height / 2));
+
+      // Avatar background circle
+      const avatarBg = this.add.circle(avatarX, avatarY, avatarSize / 2, this.getPlayerColor(index));
+      avatarBg.setDepth(100);
+
+      // Metallic gold border
+      const border = this.add.graphics();
+      border.lineStyle(4, 0xFFD700, 1);
+      border.strokeCircle(avatarX, avatarY, avatarSize / 2);
+      border.setDepth(101);
+
+      // Highlight arc (top-left)
+      const highlight = this.add.graphics();
+      highlight.lineStyle(2, 0xFFFFAA, 0.8);
+      highlight.beginPath();
+      highlight.arc(avatarX, avatarY, avatarSize / 2 - 1, Phaser.Math.DegToRad(225), Phaser.Math.DegToRad(315), false);
+      highlight.strokePath();
+      highlight.setDepth(102);
+
+      // Shadow arc (bottom-right)
+      const shadow = this.add.graphics();
+      shadow.lineStyle(2, 0xCC9900, 0.8);
+      shadow.beginPath();
+      shadow.arc(avatarX, avatarY, avatarSize / 2 - 1, Phaser.Math.DegToRad(45), Phaser.Math.DegToRad(135), false);
+      shadow.strokePath();
+      shadow.setDepth(102);
+
+      // Player initials
+      const initials = player.name.substring(0, 2).toUpperCase();
+      this.add.text(avatarX, avatarY, initials, {
+        fontSize: '20px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+        fontFamily: 'Impact, Arial Black, sans-serif',
+      }).setOrigin(0.5).setDepth(103);
+
+      // Name tag with rounded black background
+      const nameTag = this.add.text(avatarX, avatarY + avatarSize / 2 + 15, player.name, {
+        fontSize: '12px',
         color: '#ffffff',
         fontStyle: 'bold',
         backgroundColor: '#000000',
-        padding: { x: 5, y: 3 },
-      });
-      this.playerNameTexts.set(index, nameText);
+        padding: { x: 8, y: 4 },
+      }).setOrigin(0.5).setDepth(100);
+
+      // Round the name tag corners
+      nameTag.setStyle({ ...nameTag.style, borderRadius: 10 });
+
+      this.playerNameTexts.set(index, nameTag);
     });
+  }
+
+  private getPlayerColor(index: number): number {
+    const colors = [0xFF6B6B, 0x4ECDC4, 0x45B7D1, 0xFFA07A];
+    return colors[index % colors.length];
   }
 
   private selectCard(card: Card, sprite: Phaser.Physics.Arcade.Sprite): void {
@@ -244,31 +336,85 @@ export class GameScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5).setDepth(101);
 
-    // Play button - Center of table
-    this.playButton = this.add.rectangle(width / 2 - 60, height / 2 + 30, 100, 35, 0x00aa00);
+    // Play button - Green with 3D bevel effect
+    const playBtnX = width / 2 - 80;
+    const playBtnY = height / 2 + 30;
+
+    // Button shadow (bottom layer)
+    const playShadow = this.add.rectangle(playBtnX + 2, playBtnY + 2, 120, 40, 0x004400);
+    playShadow.setDepth(99);
+
+    // Main button with gradient effect (simulate with multiple rectangles)
+    this.playButton = this.add.rectangle(playBtnX, playBtnY, 120, 40, 0x00CC00);
     this.playButton.setInteractive();
-    this.playButton.on('pointerdown', () => this.playSelectedCards());
     this.playButton.setDepth(100);
 
-    this.playButtonText = this.add.text(width / 2 - 60, height / 2 + 30, 'PLAY', {
-      fontSize: '14px',
+    // Top highlight for 3D effect
+    const playHighlight = this.add.rectangle(playBtnX, playBtnY - 2, 120, 8, 0x00FF00, 0.3);
+    playHighlight.setDepth(101);
+
+    // Button border
+    const playBorder = this.add.graphics();
+    playBorder.lineStyle(2, 0x008800, 1);
+    playBorder.strokeRoundedRect(playBtnX - 60, playBtnY - 20, 120, 40, 5);
+    playBorder.setDepth(101);
+
+    this.playButtonText = this.add.text(playBtnX, playBtnY, 'PLAY', {
+      fontSize: '18px',
       color: '#ffffff',
       fontStyle: 'bold',
+      fontFamily: 'Impact, Arial Black, sans-serif',
       align: 'center',
-    }).setOrigin(0.5).setDepth(101);
+    }).setOrigin(0.5).setDepth(102);
 
-    // Pass button - Center of table
-    this.passButton = this.add.rectangle(width / 2 + 60, height / 2 + 30, 100, 35, 0xaa0000);
+    // Hover effect for play button
+    this.playButton.on('pointerover', () => {
+      this.playButton.setFillStyle(0x00FF00);
+    });
+    this.playButton.on('pointerout', () => {
+      this.playButton.setFillStyle(0x00CC00);
+    });
+    this.playButton.on('pointerdown', () => this.playSelectedCards());
+
+    // Pass button - Red with 3D bevel effect
+    const passBtnX = width / 2 + 80;
+    const passBtnY = height / 2 + 30;
+
+    // Button shadow (bottom layer)
+    const passShadow = this.add.rectangle(passBtnX + 2, passBtnY + 2, 120, 40, 0x440000);
+    passShadow.setDepth(99);
+
+    // Main button
+    this.passButton = this.add.rectangle(passBtnX, passBtnY, 120, 40, 0xCC0000);
     this.passButton.setInteractive();
-    this.passButton.on('pointerdown', () => this.passMove());
     this.passButton.setDepth(100);
 
-    this.passButtonText = this.add.text(width / 2 + 60, height / 2 + 30, 'PASS', {
-      fontSize: '14px',
+    // Top highlight for 3D effect
+    const passHighlight = this.add.rectangle(passBtnX, passBtnY - 2, 120, 8, 0xFF0000, 0.3);
+    passHighlight.setDepth(101);
+
+    // Button border
+    const passBorder = this.add.graphics();
+    passBorder.lineStyle(2, 0x880000, 1);
+    passBorder.strokeRoundedRect(passBtnX - 60, passBtnY - 20, 120, 40, 5);
+    passBorder.setDepth(101);
+
+    this.passButtonText = this.add.text(passBtnX, passBtnY, 'PASS', {
+      fontSize: '18px',
       color: '#ffffff',
       fontStyle: 'bold',
+      fontFamily: 'Impact, Arial Black, sans-serif',
       align: 'center',
-    }).setOrigin(0.5).setDepth(101);
+    }).setOrigin(0.5).setDepth(102);
+
+    // Hover effect for pass button
+    this.passButton.on('pointerover', () => {
+      this.passButton.setFillStyle(0xFF0000);
+    });
+    this.passButton.on('pointerout', () => {
+      this.passButton.setFillStyle(0xCC0000);
+    });
+    this.passButton.on('pointerdown', () => this.passMove());
   }
 
   private playSelectedCards(): void {
