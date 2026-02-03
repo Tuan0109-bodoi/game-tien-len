@@ -10,15 +10,21 @@ export class GameScene extends Phaser.Scene {
   private tableCards: Phaser.Physics.Arcade.Sprite[] = [];
 
   // Responsive sizing properties
-  private cardWidth: number = 40;
-  private cardHeight: number = 60;
-  private spacing: number = 15;
+  private cardWidth: number = 25;
+  private cardHeight: number = 37;
+  private spacing: number = 5;
   private playerNameTexts: Map<number, Phaser.GameObjects.Text> = new Map();
+  private playerCardCountTexts: Map<number, Phaser.GameObjects.Text> = new Map();
   private playButton!: Phaser.GameObjects.Rectangle;
   private passButton!: Phaser.GameObjects.Rectangle;
   private playButtonText!: Phaser.GameObjects.Text;
   private passButtonText!: Phaser.GameObjects.Text;
-  private currentPlayerText!: Phaser.GameObjects.Text;
+
+  private playerAvatars: Map<number, {
+    background: Phaser.GameObjects.Arc;
+    border: Phaser.GameObjects.Graphics;
+    glowCircle: Phaser.GameObjects.Arc;
+  }> = new Map();
 
   constructor() {
     super({ key: 'GameScene' });
@@ -36,6 +42,9 @@ export class GameScene extends Phaser.Scene {
         this.load.image(key, path);
       }
     }
+
+    // Load board background
+    this.load.image('board', 'assets/board.webp');
   }
 
   /**
@@ -45,13 +54,13 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
     const maxCards = 13;
-    const padding = 120; // Tăng padding để có chỗ cho 4 player
+    const padding = 150;
     const minCardWidth = 15;
-    const maxCardWidth = 35;
+    const maxCardWidth = 30;
     const minCardHeight = 22;
-    const maxCardHeight = 52;
-    const minSpacing = 10;
-    const maxSpacing = 15;
+    const maxCardHeight = 45;
+    const minSpacing = 3;
+    const maxSpacing = 8;
 
     const availableWidth = width - 2 * padding;
     let spacing = Math.min(maxSpacing, Math.max(minSpacing, availableWidth / (maxCards + 5)));
@@ -87,60 +96,10 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Create casino-style table with wooden rail - FULL SCREEN
-    const graphics = this.make.graphics({ x: 0, y: 0 });
-
-    // Wooden rail border (dark brown) - covers entire screen
-    const railWidth = 60;
-    graphics.fillStyle(0x3d2817, 1);
-    graphics.fillRoundedRect(
-      railWidth,
-      railWidth,
-      width - railWidth * 2,
-      height - railWidth * 2,
-      30
-    );
-
-    // Inner shadow for rail depth
-    graphics.lineStyle(4, 0x2a1810, 0.8);
-    graphics.strokeRoundedRect(
-      railWidth + 4,
-      railWidth + 4,
-      width - railWidth * 2 - 8,
-      height - railWidth * 2 - 8,
-      30
-    );
-
-    // Green felt table surface - full screen
-    graphics.fillStyle(0x1a5f3f, 1);
-    graphics.fillRoundedRect(railWidth + 10, railWidth + 10, width - (railWidth + 10) * 2, height - (railWidth + 10) * 2, 25);
-
-    graphics.generateTexture('table-bg', width, height);
-    graphics.destroy();
-
-    this.add.image(width / 2, height / 2, 'table-bg').setDepth(0);
-
-    // Add vignette effect (darker corners) - lighter for better performance
-    const vignette = this.add.graphics();
-    vignette.fillStyle(0x000000, 0);
-    vignette.fillRect(0, 0, width, height);
-
-    // Simplified vignette - only 3 layers instead of 5
-    for (let i = 0; i < 3; i++) {
-      const alpha = 0.1 - (i * 0.03);
-      const size = Math.min(width, height) * (0.4 + i * 0.25);
-      vignette.lineStyle(size, 0x000000, alpha);
-      vignette.strokeRect(0, 0, width, height);
-    }
-    vignette.setDepth(5);
-
-    // Add table label
-    this.add.text(width / 2, height / 2 - 20, 'TABLE', {
-      fontSize: '20px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(1);
+    // Use board image as background
+    const boardImage = this.add.image(width / 2, height / 2, 'board');
+    boardImage.setDisplaySize(width, height);
+    boardImage.setDepth(0);
   }
 
   private displayPlayerHands(): void {
@@ -155,24 +114,25 @@ export class GameScene extends Phaser.Scene {
       let x: number, y: number;
       let isHorizontal = false;
 
+      // Position cards based on player index
       switch (index) {
-        case 0: // Bottom - Player
+        case 0: // Bottom - Player (horizontal)
           y = height - 70;
           x = width / 2 - (hand.length * (this.cardWidth + this.spacing)) / 2;
           isHorizontal = true;
           break;
-        case 1: // Right - Opponent
-          x = width - 100;
+        case 1: // Right - Opponent (vertical)
+          x = width - 95;
           y = height / 2 - (hand.length * (this.cardHeight + this.spacing)) / 2;
           isHorizontal = false;
           break;
-        case 2: // Top - Opponent
+        case 2: // Top - Opponent (horizontal)
           y = 60;
           x = width / 2 - (hand.length * (this.cardWidth + this.spacing)) / 2;
           isHorizontal = true;
           break;
-        case 3: // Left - Opponent
-          x = 60;
+        case 3: // Left - Opponent (vertical)
+          x = 95;
           y = height / 2 - (hand.length * (this.cardHeight + this.spacing)) / 2;
           isHorizontal = false;
           break;
@@ -182,45 +142,42 @@ export class GameScene extends Phaser.Scene {
           isHorizontal = true;
       }
 
-      hand.forEach((card, cardIndex) => {
-        let cardX = x;
-        let cardY = y;
+      // Only display cards for current player (index 0)
+      // For other players, show card back instead
+      if (index === 0) {
+        hand.forEach((card, cardIndex) => {
+          let cardX = x;
+          let cardY = y;
 
-        if (isHorizontal) {
-          cardX += cardIndex * (this.cardWidth + this.spacing);
-        } else {
-          cardY += cardIndex * (this.cardHeight + this.spacing);
-        }
+          if (isHorizontal) {
+            cardX += cardIndex * (this.cardWidth + this.spacing);
+          } else {
+            cardY += cardIndex * (this.cardHeight + this.spacing);
+          }
 
-        const baseCardWidth = 80;
-        const baseCardHeight = 120;
-        const scaleX = this.cardWidth / baseCardWidth;
-        const scaleY = this.cardHeight / baseCardHeight;
-        const scale = Math.min(scaleX, scaleY);
+          const baseCardWidth = 80;
+          const baseCardHeight = 120;
+          const scaleX = this.cardWidth / baseCardWidth;
+          const scaleY = this.cardHeight / baseCardHeight;
+          const scale = Math.min(scaleX, scaleY);
 
-        const sprite = this.physics.add.sprite(cardX, cardY, `card-${card.rank}-${card.suit}`);
-        sprite.setScale(scale);
-        sprite.setDepth(cardIndex + 10);
-        sprite.setInteractive();
+          const sprite = this.physics.add.sprite(cardX, cardY, `card-${card.rank}-${card.suit}`);
+          sprite.setScale(scale);
+          sprite.setDepth(cardIndex + 10);
+          sprite.setInteractive();
 
-        // Add subtle drop shadow for depth (lighter for better performance)
-        if (sprite.preFX) {
-          sprite.preFX.addShadow(1, 1, 0.03, 0.5, 0x000000, 3);
-        }
+          sprite.setData('originalY', cardY);
+          sprite.setData('originalX', cardX);
+          sprite.setData('playerIndex', index);
+          sprite.setData('cardId', card.id);
 
-        sprite.setData('originalY', cardY);
-        sprite.setData('originalX', cardX);
-        sprite.setData('playerIndex', index);
-        sprite.setData('cardId', card.id);
+          sprite.on('pointerdown', () => this.selectCard(card, sprite));
 
-        sprite.on('pointerdown', () => this.selectCard(card, sprite));
-
-        // Hover effect only for player 0
-        if (index === 0) {
+          // Hover effect only for player 0
           sprite.on('pointerover', () => {
             if (!this.selectedCards.has(card.id)) {
               sprite.setTint(0xcccccc);
-              sprite.setY(cardY - 12);
+              sprite.setY(cardY - 10);
             }
           });
 
@@ -230,73 +187,137 @@ export class GameScene extends Phaser.Scene {
               sprite.setY(cardY);
             }
           });
-        }
 
-        sprites.push(sprite);
-        this.cardSprites.set(card.id, sprite);
-      });
+          sprites.push(sprite);
+          this.cardSprites.set(card.id, sprite);
+        });
+      }
 
       this.playerHands.set(index, sprites);
 
-      // Create avatar with metallic gold border
-      const avatarSize = 50;
-      const avatarX = index === 0 ? width / 2 : (index === 1 ? width - 80 : (index === 2 ? width / 2 : 80));
-      const avatarY = index === 0 ? height - 120 : (index === 1 ? height / 2 : (index === 2 ? 100 : height / 2));
+      // Create avatar
+      const avatarSize = 65;
+      const avatarX = index === 0 ? width / 2 : (index === 1 ? width - 75 : (index === 2 ? width / 2 : 75));
+      const avatarY = index === 0 ? height - 140 : (index === 1 ? height / 2 : (index === 2 ? 90 : height / 2));
 
-      // Avatar background circle
+      // Glow circle (for active player - initially hidden)
+      const glowCircle = this.add.circle(avatarX, avatarY, avatarSize / 2 + 10, 0xFFFF00, 0);
+      glowCircle.setDepth(99);
+
+      // Avatar background circle with solid color
       const avatarBg = this.add.circle(avatarX, avatarY, avatarSize / 2, this.getPlayerColor(index));
       avatarBg.setDepth(100);
 
-      // Metallic gold border
+      // Thick yellow border
       const border = this.add.graphics();
-      border.lineStyle(4, 0xFFD700, 1);
+      border.lineStyle(7, 0xFFD700, 1);
       border.strokeCircle(avatarX, avatarY, avatarSize / 2);
       border.setDepth(101);
 
-      // Highlight arc (top-left)
-      const highlight = this.add.graphics();
-      highlight.lineStyle(2, 0xFFFFAA, 0.8);
-      highlight.beginPath();
-      highlight.arc(avatarX, avatarY, avatarSize / 2 - 1, Phaser.Math.DegToRad(225), Phaser.Math.DegToRad(315), false);
-      highlight.strokePath();
-      highlight.setDepth(102);
+      // Store avatar references
+      this.playerAvatars.set(index, {
+        background: avatarBg,
+        border: border,
+        glowCircle: glowCircle
+      });
 
-      // Shadow arc (bottom-right)
-      const shadow = this.add.graphics();
-      shadow.lineStyle(2, 0xCC9900, 0.8);
-      shadow.beginPath();
-      shadow.arc(avatarX, avatarY, avatarSize / 2 - 1, Phaser.Math.DegToRad(45), Phaser.Math.DegToRad(135), false);
-      shadow.strokePath();
-      shadow.setDepth(102);
-
-      // Player initials
+      // Player initials in white
       const initials = player.name.substring(0, 2).toUpperCase();
       this.add.text(avatarX, avatarY, initials, {
-        fontSize: '20px',
+        fontSize: '24px',
         color: '#ffffff',
         fontStyle: 'bold',
-        fontFamily: 'Impact, Arial Black, sans-serif',
+        fontFamily: 'Arial Black, sans-serif',
       }).setOrigin(0.5).setDepth(103);
 
-      // Name tag with rounded black background
-      const nameTag = this.add.text(avatarX, avatarY + avatarSize / 2 + 15, player.name, {
+      // Name tag with rounded black background below avatar
+      const nameTag = this.add.text(avatarX, avatarY + avatarSize / 2 + 22, player.name, {
         fontSize: '12px',
         color: '#ffffff',
         fontStyle: 'bold',
         backgroundColor: '#000000',
-        padding: { x: 8, y: 4 },
+        padding: { x: 10, y: 4 },
       }).setOrigin(0.5).setDepth(100);
 
-      // Round the name tag corners
-      nameTag.setStyle({ ...nameTag.style, borderRadius: 10 });
-
       this.playerNameTexts.set(index, nameTag);
+
+      // Card count display for non-player opponents
+      if (index !== 0) {
+        const cardCountText = this.add.text(avatarX + 35, avatarY - 35, hand.length.toString(), {
+          fontSize: '16px',
+          color: '#ffffff',
+          fontStyle: 'bold',
+          backgroundColor: '#8B0000',
+          padding: { x: 8, y: 4 },
+        }).setOrigin(0.5).setDepth(102);
+
+        this.playerCardCountTexts.set(index, cardCountText);
+      }
     });
   }
 
   private getPlayerColor(index: number): number {
-    const colors = [0xFF6B6B, 0x4ECDC4, 0x45B7D1, 0xFFA07A];
+    // Colors: Red, Orange, Blue, Yellow
+    const colors = [0xE74C3C, 0xFF9500, 0x3498DB, 0xF1C40F];
     return colors[index % colors.length];
+  }
+
+  /**
+   * Highlight the active player's avatar with glow effect
+   */
+  private highlightActivePlayer(playerIndex: number): void {
+    // Remove highlight from all players
+    this.playerAvatars.forEach((avatar, index) => {
+      // Stop old animations
+      this.tweens.killTweensOf(avatar.glowCircle);
+
+      if (avatar.glowCircle) {
+        avatar.glowCircle.setAlpha(0);
+      }
+
+      // Reset border to normal gold
+      avatar.border.clear();
+      const pos = this.getAvatarPosition(index);
+      avatar.border.lineStyle(7, 0xFFD700, 1);
+      avatar.border.strokeCircle(pos.x, pos.y, 32.5);
+    });
+
+    // Highlight current player with pulsing glow
+    const activeAvatar = this.playerAvatars.get(playerIndex);
+    if (activeAvatar && activeAvatar.glowCircle) {
+      // Pulsing glow effect
+      this.tweens.add({
+        targets: activeAvatar.glowCircle,
+        alpha: { from: 0.5, to: 0.8 },
+        scale: { from: 1, to: 1.15 },
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+
+      // Keep border same thickness but brighter
+      const pos = this.getAvatarPosition(playerIndex);
+      activeAvatar.border.clear();
+      activeAvatar.border.lineStyle(7, 0xFFFF00, 1); // Bright yellow
+      activeAvatar.border.strokeCircle(pos.x, pos.y, 32.5);
+    }
+  }
+
+  /**
+   * Get avatar position for a player index
+   */
+  private getAvatarPosition(index: number): { x: number; y: number } {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    switch (index) {
+      case 0: return { x: width / 2, y: height - 140 };
+      case 1: return { x: width - 75, y: height / 2 };
+      case 2: return { x: width / 2, y: 90 };
+      case 3: return { x: 75, y: height / 2 };
+      default: return { x: 0, y: 0 };
+    }
   }
 
   private selectCard(card: Card, sprite: Phaser.Physics.Arcade.Sprite): void {
@@ -316,7 +337,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.selectedCards.add(card.id);
       sprite.setTint(0xffff00);
-      sprite.setY(originalY - 25);
+      sprite.setY(originalY - 20);
     }
   }
 
@@ -324,97 +345,59 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Current player indicator
-    const gameState = this.gameLogic.getGameState();
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-    this.currentPlayerText = this.add.text(width / 2, height / 2 - 60, `${currentPlayer.name}'s Turn`, {
-      fontSize: '16px',
-      color: '#ffff00',
-      fontStyle: 'bold',
-      backgroundColor: '#000000',
-      padding: { x: 10, y: 5 },
-      align: 'center',
-    }).setOrigin(0.5).setDepth(101);
-
-    // Play button - Green with 3D bevel effect
+    // Play button - Green
     const playBtnX = width / 2 - 80;
-    const playBtnY = height / 2 + 30;
+    const playBtnY = height / 2 + 35;
 
-    // Button shadow (bottom layer)
-    const playShadow = this.add.rectangle(playBtnX + 2, playBtnY + 2, 120, 40, 0x004400);
-    playShadow.setDepth(99);
-
-    // Main button with gradient effect (simulate with multiple rectangles)
-    this.playButton = this.add.rectangle(playBtnX, playBtnY, 120, 40, 0x00CC00);
+    this.playButton = this.add.rectangle(playBtnX, playBtnY, 130, 45, 0x27AE60);
     this.playButton.setInteractive();
     this.playButton.setDepth(100);
-
-    // Top highlight for 3D effect
-    const playHighlight = this.add.rectangle(playBtnX, playBtnY - 2, 120, 8, 0x00FF00, 0.3);
-    playHighlight.setDepth(101);
-
-    // Button border
-    const playBorder = this.add.graphics();
-    playBorder.lineStyle(2, 0x008800, 1);
-    playBorder.strokeRoundedRect(playBtnX - 60, playBtnY - 20, 120, 40, 5);
-    playBorder.setDepth(101);
 
     this.playButtonText = this.add.text(playBtnX, playBtnY, 'PLAY', {
       fontSize: '18px',
       color: '#ffffff',
       fontStyle: 'bold',
-      fontFamily: 'Impact, Arial Black, sans-serif',
+      fontFamily: 'Arial Black, sans-serif',
       align: 'center',
     }).setOrigin(0.5).setDepth(102);
 
     // Hover effect for play button
     this.playButton.on('pointerover', () => {
-      this.playButton.setFillStyle(0x00FF00);
+      this.playButton.setFillStyle(0x2ECC71);
     });
     this.playButton.on('pointerout', () => {
-      this.playButton.setFillStyle(0x00CC00);
+      this.playButton.setFillStyle(0x27AE60);
     });
     this.playButton.on('pointerdown', () => this.playSelectedCards());
 
-    // Pass button - Red with 3D bevel effect
+    // Pass button - Red
     const passBtnX = width / 2 + 80;
-    const passBtnY = height / 2 + 30;
+    const passBtnY = height / 2 + 35;
 
-    // Button shadow (bottom layer)
-    const passShadow = this.add.rectangle(passBtnX + 2, passBtnY + 2, 120, 40, 0x440000);
-    passShadow.setDepth(99);
-
-    // Main button
-    this.passButton = this.add.rectangle(passBtnX, passBtnY, 120, 40, 0xCC0000);
+    this.passButton = this.add.rectangle(passBtnX, passBtnY, 130, 45, 0xC0392B);
     this.passButton.setInteractive();
     this.passButton.setDepth(100);
-
-    // Top highlight for 3D effect
-    const passHighlight = this.add.rectangle(passBtnX, passBtnY - 2, 120, 8, 0xFF0000, 0.3);
-    passHighlight.setDepth(101);
-
-    // Button border
-    const passBorder = this.add.graphics();
-    passBorder.lineStyle(2, 0x880000, 1);
-    passBorder.strokeRoundedRect(passBtnX - 60, passBtnY - 20, 120, 40, 5);
-    passBorder.setDepth(101);
 
     this.passButtonText = this.add.text(passBtnX, passBtnY, 'PASS', {
       fontSize: '18px',
       color: '#ffffff',
       fontStyle: 'bold',
-      fontFamily: 'Impact, Arial Black, sans-serif',
+      fontFamily: 'Arial Black, sans-serif',
       align: 'center',
     }).setOrigin(0.5).setDepth(102);
 
     // Hover effect for pass button
     this.passButton.on('pointerover', () => {
-      this.passButton.setFillStyle(0xFF0000);
+      this.passButton.setFillStyle(0xE74C3C);
     });
     this.passButton.on('pointerout', () => {
-      this.passButton.setFillStyle(0xCC0000);
+      this.passButton.setFillStyle(0xC0392B);
     });
     this.passButton.on('pointerdown', () => this.passMove());
+
+    // Highlight active player
+    const gameState = this.gameLogic.getGameState();
+    this.highlightActivePlayer(gameState.currentPlayerIndex);
   }
 
   private playSelectedCards(): void {
@@ -445,8 +428,8 @@ export class GameScene extends Phaser.Scene {
 
     // Display new cards on table
     cards.forEach((card, index) => {
-      const offsetX = (index - cards.length / 2 + 0.5) * 40;
-      const offsetY = (index - cards.length / 2 + 0.5) * 30;
+      const offsetX = (index - cards.length / 2 + 0.5) * 30;
+      const offsetY = (index - cards.length / 2 + 0.5) * 20;
 
       const baseCardWidth = 80;
       const baseCardHeight = 120;
@@ -461,7 +444,7 @@ export class GameScene extends Phaser.Scene {
       );
       sprite.setScale(scale);
       sprite.setDepth(5);
-      sprite.setAngle(Phaser.Math.Between(-15, 15)); // Random rotation
+      sprite.setAngle(Phaser.Math.Between(-15, 15));
 
       this.tableCards.push(sprite);
     });
@@ -471,13 +454,9 @@ export class GameScene extends Phaser.Scene {
     const gameState = this.gameLogic.getGameState();
     const currentPlayerIndex = gameState.currentPlayerIndex;
 
-    console.log('Pass move called for player', currentPlayerIndex);
     if (this.gameLogic.passMove(currentPlayerIndex)) {
-      console.log('Pass successful');
       this.selectedCards.clear();
       this.updateDisplay();
-    } else {
-      console.log('Pass failed');
     }
   }
 
@@ -489,18 +468,26 @@ export class GameScene extends Phaser.Scene {
     this.playerNameTexts.forEach(text => text.destroy());
     this.playerNameTexts.clear();
 
-    // Update current player indicator
-    const gameState = this.gameLogic.getGameState();
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    this.playerCardCountTexts.forEach(text => text.destroy());
+    this.playerCardCountTexts.clear();
 
-    if (this.currentPlayerText) {
-      this.currentPlayerText.setText(`${currentPlayer.name}'s Turn`);
-      this.currentPlayerText.setPosition(width / 2, height / 2 - 60);
-    }
+    // Cleanup avatar objects
+    this.playerAvatars.forEach(avatar => {
+      this.tweens.killTweensOf(avatar.glowCircle);
+      avatar.background.destroy();
+      avatar.border.destroy();
+      if (avatar.glowCircle) {
+        avatar.glowCircle.destroy();
+      }
+    });
+    this.playerAvatars.clear();
 
+    // Redisplay everything
     this.displayPlayerHands();
+
+    // Highlight active player
+    const gameState = this.gameLogic.getGameState();
+    this.highlightActivePlayer(gameState.currentPlayerIndex);
   }
 
   private updateCardPositions(): void {
@@ -522,7 +509,7 @@ export class GameScene extends Phaser.Scene {
           isHorizontal = true;
           break;
         case 1:
-          x = width - 100;
+          x = width - 95;
           y = height / 2 - (hand.length * (this.cardHeight + this.spacing)) / 2;
           isHorizontal = false;
           break;
@@ -532,7 +519,7 @@ export class GameScene extends Phaser.Scene {
           isHorizontal = true;
           break;
         case 3:
-          x = 60;
+          x = 95;
           y = height / 2 - (hand.length * (this.cardHeight + this.spacing)) / 2;
           isHorizontal = false;
           break;
@@ -562,18 +549,43 @@ export class GameScene extends Phaser.Scene {
 
       const nameText = this.playerNameTexts.get(playerIndex);
       if (nameText) {
-        nameText.setPosition(x, y - 35);
+        const pos = this.getAvatarPosition(playerIndex);
+        nameText.setPosition(pos.x, pos.y + 40);
+      }
+
+      // Update card count text
+      const cardCountText = this.playerCardCountTexts.get(playerIndex);
+      if (cardCountText) {
+        const pos = this.getAvatarPosition(playerIndex);
+        cardCountText.setPosition(pos.x + 35, pos.y - 35);
+        cardCountText.setText(hand.length.toString());
       }
     });
 
-    // Update button positions - Center of table
-    this.playButton.setPosition(width / 2 - 60, height / 2 + 30);
-    this.playButtonText.setPosition(width / 2 - 60, height / 2 + 30);
+    // Update avatar positions on resize
+    this.playerAvatars.forEach((avatar, index) => {
+      const pos = this.getAvatarPosition(index);
+      const avatarSize = 65;
 
-    this.passButton.setPosition(width / 2 + 60, height / 2 + 30);
-    this.passButtonText.setPosition(width / 2 + 60, height / 2 + 30);
+      avatar.background.setPosition(pos.x, pos.y);
+      if (avatar.glowCircle) {
+        avatar.glowCircle.setPosition(pos.x, pos.y);
+      }
 
-    this.currentPlayerText.setPosition(width / 2, height / 2 - 60);
+      // Redraw graphics at new position
+      const isActive = gameState.currentPlayerIndex === index;
+
+      avatar.border.clear();
+      avatar.border.lineStyle(7, isActive ? 0xFFFF00 : 0xFFD700, 1);
+      avatar.border.strokeCircle(pos.x, pos.y, avatarSize / 2);
+    });
+
+    // Update button positions
+    this.playButton.setPosition(width / 2 - 80, height / 2 + 35);
+    this.playButtonText.setPosition(width / 2 - 80, height / 2 + 35);
+
+    this.passButton.setPosition(width / 2 + 80, height / 2 + 35);
+    this.passButtonText.setPosition(width / 2 + 80, height / 2 + 35);
   }
 
   private handleResize(): void {

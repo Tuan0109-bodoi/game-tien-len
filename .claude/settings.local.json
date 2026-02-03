@@ -6,7 +6,15 @@
       "Bash(ls:*)",
       "Bash(npm run build)",
       "Bash(tree:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(npm run dev)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(PORT=3000 npm run dev:*)",
+      "Bash(npx http-server:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
