@@ -92,15 +92,15 @@ export class GameLogic {
 
   private compareCards(a: Card, b: Card): number {
     const rankOrder: Record<Rank, number> = {
-      '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5,
-      '8': 6, '9': 7, '10': 8, 'J': 9, 'Q': 10, 'K': 11, 'A': 12,
+      '3': 0, '4': 1, '5': 2, '6': 3, '7': 4, '8': 5,
+      '9': 6, '10': 7, 'J': 8, 'Q': 9, 'K': 10, 'A': 11, '2': 12,
     };
 
     const rankDiff = rankOrder[a.rank] - rankOrder[b.rank];
     if (rankDiff !== 0) return rankDiff;
 
     const suitOrder: Record<Suit, number> = {
-      'spades': 0, 'hearts': 1, 'diamonds': 2, 'clubs': 3,
+      'spades': 0, 'clubs': 1, 'diamonds': 2, 'hearts': 3,
     };
 
     return suitOrder[a.suit] - suitOrder[b.suit];

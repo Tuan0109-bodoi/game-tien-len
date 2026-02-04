@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { Card, Player } from '../types';
 import { GameLogic } from '../game/GameLogic';
+import { CurvedCardLayout, CardPosition } from '../utils/CurvedCardLayout';
+import { MoneyBar } from '../components/MoneyBar';
 
 export class GameScene extends Phaser.Scene {
   private gameLogic!: GameLogic;
@@ -26,6 +28,14 @@ export class GameScene extends Phaser.Scene {
     glowCircle: Phaser.GameObjects.Arc;
   }> = new Map();
 
+  private playerMoneyBars: Map<number, MoneyBar> = new Map();
+  private playerMoney: Map<number, number> = new Map([
+    [0, 10000],
+    [1, 8500],
+    [2, 12000],
+    [3, 9500]
+  ]);
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -43,6 +53,9 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Load card back
+    this.load.image('card-back', 'assets/default/cards/sleeve.webp');
+
     // Load board background
     this.load.image('board', 'assets/board.webp');
   }
@@ -54,13 +67,13 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
     const maxCards = 13;
-    const padding = 150;
-    const minCardWidth = 15;
-    const maxCardWidth = 30;
-    const minCardHeight = 22;
-    const maxCardHeight = 45;
-    const minSpacing = 3;
-    const maxSpacing = 8;
+    const padding = 200;  // More padding to avoid overlap
+    const minCardWidth = 20;
+    const maxCardWidth = 35;
+    const minCardHeight = 30;
+    const maxCardHeight = 50;
+    const minSpacing = 5;
+    const maxSpacing = 12;
 
     const availableWidth = width - 2 * padding;
     let spacing = Math.min(maxSpacing, Math.max(minSpacing, availableWidth / (maxCards + 5)));
@@ -111,107 +124,71 @@ export class GameScene extends Phaser.Scene {
       const hand = this.gameLogic.getPlayerHand(index);
       const sprites: Phaser.Physics.Arcade.Sprite[] = [];
 
-      let x: number, y: number;
-      let isHorizontal = false;
+      // Calculate curved positions
+      const positions = CurvedCardLayout.calculateHandPositions({
+        playerIndex: index,
+        numCards: hand.length,
+        screenWidth: width,
+        screenHeight: height,
+        cardWidth: this.cardWidth,
+        cardHeight: this.cardHeight
+      });
 
-      // Position cards based on player index
-      switch (index) {
-        case 0: // Bottom - Player (horizontal)
-          y = height - 70;
-          x = width / 2 - (hand.length * (this.cardWidth + this.spacing)) / 2;
-          isHorizontal = true;
-          break;
-        case 1: // Right - Opponent (vertical)
-          x = width - 95;
-          y = height / 2 - (hand.length * (this.cardHeight + this.spacing)) / 2;
-          isHorizontal = false;
-          break;
-        case 2: // Top - Opponent (horizontal)
-          y = 60;
-          x = width / 2 - (hand.length * (this.cardWidth + this.spacing)) / 2;
-          isHorizontal = true;
-          break;
-        case 3: // Left - Opponent (vertical)
-          x = 95;
-          y = height / 2 - (hand.length * (this.cardHeight + this.spacing)) / 2;
-          isHorizontal = false;
-          break;
-        default:
-          x = 0;
-          y = 0;
-          isHorizontal = true;
-      }
+      // Display cards
+      hand.forEach((card, cardIndex) => {
+        const pos = positions[cardIndex];
 
-      // Only display cards for current player (index 0)
-      // For other players, show card back instead
-      if (index === 0) {
-        hand.forEach((card, cardIndex) => {
-          let cardX = x;
-          let cardY = y;
+        // Determine texture: player 0 shows fronts, others show backs
+        const texture = index === 0
+          ? `card-${card.rank}-${card.suit}`
+          : 'card-back';
 
-          if (isHorizontal) {
-            cardX += cardIndex * (this.cardWidth + this.spacing);
-          } else {
-            cardY += cardIndex * (this.cardHeight + this.spacing);
-          }
+        const baseCardWidth = 80;
+        const baseCardHeight = 120;
+        const scaleX = this.cardWidth / baseCardWidth;
+        const scaleY = this.cardHeight / baseCardHeight;
+        const scale = Math.min(scaleX, scaleY);
 
-          const baseCardWidth = 80;
-          const baseCardHeight = 120;
-          const scaleX = this.cardWidth / baseCardWidth;
-          const scaleY = this.cardHeight / baseCardHeight;
-          const scale = Math.min(scaleX, scaleY);
+        const sprite = this.physics.add.sprite(pos.x, pos.y, texture);
+        sprite.setScale(scale);
+        sprite.setAngle(pos.rotation);
+        sprite.setDepth(cardIndex + 10);
 
-          const sprite = this.physics.add.sprite(cardX, cardY, `card-${card.rank}-${card.suit}`);
-          sprite.setScale(scale);
-          sprite.setDepth(cardIndex + 10);
+        // Only make player 0 cards interactive
+        if (index === 0) {
           sprite.setInteractive();
-
-          sprite.setData('originalY', cardY);
-          sprite.setData('originalX', cardX);
+          sprite.setData('originalY', pos.y);
+          sprite.setData('originalX', pos.x);
+          sprite.setData('originalRotation', pos.rotation);
           sprite.setData('playerIndex', index);
           sprite.setData('cardId', card.id);
 
           sprite.on('pointerdown', () => this.selectCard(card, sprite));
+          this.setupCardHoverEffects(sprite, pos);
+        }
 
-          // Hover effect only for player 0
-          sprite.on('pointerover', () => {
-            if (!this.selectedCards.has(card.id)) {
-              sprite.setTint(0xcccccc);
-              sprite.setY(cardY - 10);
-            }
-          });
-
-          sprite.on('pointerout', () => {
-            if (!this.selectedCards.has(card.id)) {
-              sprite.clearTint();
-              sprite.setY(cardY);
-            }
-          });
-
-          sprites.push(sprite);
-          this.cardSprites.set(card.id, sprite);
-        });
-      }
+        sprites.push(sprite);
+        this.cardSprites.set(card.id, sprite);
+      });
 
       this.playerHands.set(index, sprites);
 
       // Create avatar
       const avatarSize = 65;
-      const avatarX = index === 0 ? width / 2 : (index === 1 ? width - 75 : (index === 2 ? width / 2 : 75));
-      const avatarY = index === 0 ? height - 140 : (index === 1 ? height / 2 : (index === 2 ? 90 : height / 2));
+      const avatarPos = this.getAvatarPosition(index);
 
       // Glow circle (for active player - initially hidden)
-      const glowCircle = this.add.circle(avatarX, avatarY, avatarSize / 2 + 10, 0xFFFF00, 0);
+      const glowCircle = this.add.circle(avatarPos.x, avatarPos.y, avatarSize / 2 + 10, 0xFFFF00, 0);
       glowCircle.setDepth(99);
 
       // Avatar background circle with solid color
-      const avatarBg = this.add.circle(avatarX, avatarY, avatarSize / 2, this.getPlayerColor(index));
+      const avatarBg = this.add.circle(avatarPos.x, avatarPos.y, avatarSize / 2, this.getPlayerColor(index));
       avatarBg.setDepth(100);
 
       // Thick yellow border
       const border = this.add.graphics();
       border.lineStyle(7, 0xFFD700, 1);
-      border.strokeCircle(avatarX, avatarY, avatarSize / 2);
+      border.strokeCircle(avatarPos.x, avatarPos.y, avatarSize / 2);
       border.setDepth(101);
 
       // Store avatar references
@@ -223,15 +200,15 @@ export class GameScene extends Phaser.Scene {
 
       // Player initials in white
       const initials = player.name.substring(0, 2).toUpperCase();
-      this.add.text(avatarX, avatarY, initials, {
+      this.add.text(avatarPos.x, avatarPos.y, initials, {
         fontSize: '24px',
         color: '#ffffff',
         fontStyle: 'bold',
         fontFamily: 'Arial Black, sans-serif',
       }).setOrigin(0.5).setDepth(103);
 
-      // Name tag with rounded black background below avatar
-      const nameTag = this.add.text(avatarX, avatarY + avatarSize / 2 + 22, player.name, {
+      // Name tag with rounded black background ABOVE avatar
+      const nameTag = this.add.text(avatarPos.x, avatarPos.y - avatarSize / 2 - 22, player.name, {
         fontSize: '12px',
         color: '#ffffff',
         fontStyle: 'bold',
@@ -243,7 +220,7 @@ export class GameScene extends Phaser.Scene {
 
       // Card count display for non-player opponents
       if (index !== 0) {
-        const cardCountText = this.add.text(avatarX + 35, avatarY - 35, hand.length.toString(), {
+        const cardCountText = this.add.text(avatarPos.x + 35, avatarPos.y - 35, hand.length.toString(), {
           fontSize: '16px',
           color: '#ffffff',
           fontStyle: 'bold',
@@ -253,6 +230,9 @@ export class GameScene extends Phaser.Scene {
 
         this.playerCardCountTexts.set(index, cardCountText);
       }
+
+      // Create money bar
+      this.createMoneyBar(index);
     });
   }
 
@@ -260,6 +240,46 @@ export class GameScene extends Phaser.Scene {
     // Colors: Red, Orange, Blue, Yellow
     const colors = [0xE74C3C, 0xFF9500, 0x3498DB, 0xF1C40F];
     return colors[index % colors.length];
+  }
+
+  /**
+   * Setup hover effects for curved cards
+   */
+  private setupCardHoverEffects(sprite: Phaser.Physics.Arcade.Sprite, pos: CardPosition): void {
+    sprite.on('pointerover', () => {
+      const cardId = sprite.getData('cardId');
+      if (!this.selectedCards.has(cardId)) {
+        sprite.setTint(0xcccccc);
+        // Move card up slightly
+        sprite.setY(pos.y - 15);
+      }
+    });
+
+    sprite.on('pointerout', () => {
+      const cardId = sprite.getData('cardId');
+      if (!this.selectedCards.has(cardId)) {
+        sprite.clearTint();
+        sprite.setY(pos.y);
+      }
+    });
+  }
+
+  /**
+   * Create money bar for a player
+   */
+  private createMoneyBar(playerIndex: number): void {
+    const avatarPos = this.getAvatarPosition(playerIndex);
+    const moneyAmount = this.playerMoney.get(playerIndex) || 0;
+
+    // Position BELOW avatar (name is above)
+    const moneyBar = new MoneyBar(
+      this,
+      avatarPos.x,
+      avatarPos.y + 55,  // Below avatar
+      moneyAmount
+    );
+
+    this.playerMoneyBars.set(playerIndex, moneyBar);
   }
 
   /**
@@ -312,10 +332,10 @@ export class GameScene extends Phaser.Scene {
     const height = this.cameras.main.height;
 
     switch (index) {
-      case 0: return { x: width / 2, y: height - 140 };
-      case 1: return { x: width - 75, y: height / 2 };
-      case 2: return { x: width / 2, y: 90 };
-      case 3: return { x: 75, y: height / 2 };
+      case 0: return { x: 80, y: height - 80 };  // Bottom-left corner
+      case 1: return { x: width - 80, y: height / 2 };  // Right middle
+      case 2: return { x: width / 2, y: 80 };  // Top center
+      case 3: return { x: 80, y: height / 2 };  // Left middle
       default: return { x: 0, y: 0 };
     }
   }
@@ -328,16 +348,20 @@ export class GameScene extends Phaser.Scene {
     // Only allow current player to select cards
     if (playerIndex !== currentPlayerIndex) return;
 
+    const originalX = sprite.getData('originalX');
     const originalY = sprite.getData('originalY');
+    const originalRotation = sprite.getData('originalRotation');
 
     if (this.selectedCards.has(card.id)) {
       this.selectedCards.delete(card.id);
       sprite.clearTint();
-      sprite.setY(originalY);
+      sprite.setPosition(originalX, originalY);
+      sprite.setAngle(originalRotation);
     } else {
       this.selectedCards.add(card.id);
       sprite.setTint(0xffff00);
-      sprite.setY(originalY - 20);
+      // Move card up when selected
+      sprite.setY(originalY - 30);
     }
   }
 
@@ -345,9 +369,9 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Play button - Green
-    const playBtnX = width / 2 - 80;
-    const playBtnY = height / 2 + 35;
+    // Play button - Green (bottom left, outside board)
+    const playBtnX = 150;
+    const playBtnY = height - 150;
 
     this.playButton = this.add.rectangle(playBtnX, playBtnY, 130, 45, 0x27AE60);
     this.playButton.setInteractive();
@@ -370,9 +394,9 @@ export class GameScene extends Phaser.Scene {
     });
     this.playButton.on('pointerdown', () => this.playSelectedCards());
 
-    // Pass button - Red
-    const passBtnX = width / 2 + 80;
-    const passBtnY = height / 2 + 35;
+    // Pass button - Red (bottom right, outside board)
+    const passBtnX = width - 150;
+    const passBtnY = height - 150;
 
     this.passButton = this.add.rectangle(passBtnX, passBtnY, 130, 45, 0xC0392B);
     this.passButton.setInteractive();
@@ -471,6 +495,10 @@ export class GameScene extends Phaser.Scene {
     this.playerCardCountTexts.forEach(text => text.destroy());
     this.playerCardCountTexts.clear();
 
+    // Cleanup money bars
+    this.playerMoneyBars.forEach(bar => bar.destroy());
+    this.playerMoneyBars.clear();
+
     // Cleanup avatar objects
     this.playerAvatars.forEach(avatar => {
       this.tweens.killTweensOf(avatar.glowCircle);
@@ -499,58 +527,34 @@ export class GameScene extends Phaser.Scene {
       const hand = this.gameLogic.getPlayerHand(playerIndex);
       const sprites = this.playerHands.get(playerIndex) || [];
 
-      let x: number, y: number;
-      let isHorizontal = false;
-
-      switch (playerIndex) {
-        case 0:
-          y = height - 70;
-          x = width / 2 - (hand.length * (this.cardWidth + this.spacing)) / 2;
-          isHorizontal = true;
-          break;
-        case 1:
-          x = width - 95;
-          y = height / 2 - (hand.length * (this.cardHeight + this.spacing)) / 2;
-          isHorizontal = false;
-          break;
-        case 2:
-          y = 60;
-          x = width / 2 - (hand.length * (this.cardWidth + this.spacing)) / 2;
-          isHorizontal = true;
-          break;
-        case 3:
-          x = 95;
-          y = height / 2 - (hand.length * (this.cardHeight + this.spacing)) / 2;
-          isHorizontal = false;
-          break;
-        default:
-          x = 0;
-          y = 0;
-          isHorizontal = true;
-      }
+      // Recalculate curved positions
+      const positions = CurvedCardLayout.calculateHandPositions({
+        playerIndex,
+        numCards: hand.length,
+        screenWidth: width,
+        screenHeight: height,
+        cardWidth: this.cardWidth,
+        cardHeight: this.cardHeight
+      });
 
       sprites.forEach((sprite, cardIndex) => {
-        let cardX = x;
-        let cardY = y;
+        const pos = positions[cardIndex];
 
-        if (isHorizontal) {
-          cardX += cardIndex * (this.cardWidth + this.spacing);
-        } else {
-          cardY += cardIndex * (this.cardHeight + this.spacing);
-        }
+        sprite.setData('originalX', pos.x);
+        sprite.setData('originalY', pos.y);
+        sprite.setData('originalRotation', pos.rotation);
 
-        sprite.setData('originalY', cardY);
-        sprite.setData('originalX', cardX);
-
-        if (!this.selectedCards.has(sprite.getData('cardId'))) {
-          sprite.setPosition(cardX, cardY);
+        const cardId = sprite.getData('cardId');
+        if (!this.selectedCards.has(cardId)) {
+          sprite.setPosition(pos.x, pos.y);
+          sprite.setAngle(pos.rotation);
         }
       });
 
       const nameText = this.playerNameTexts.get(playerIndex);
       if (nameText) {
         const pos = this.getAvatarPosition(playerIndex);
-        nameText.setPosition(pos.x, pos.y + 40);
+        nameText.setPosition(pos.x, pos.y - 40);  // Above avatar
       }
 
       // Update card count text
@@ -559,6 +563,13 @@ export class GameScene extends Phaser.Scene {
         const pos = this.getAvatarPosition(playerIndex);
         cardCountText.setPosition(pos.x + 35, pos.y - 35);
         cardCountText.setText(hand.length.toString());
+      }
+
+      // Update money bar position
+      const moneyBar = this.playerMoneyBars.get(playerIndex);
+      if (moneyBar) {
+        const pos = this.getAvatarPosition(playerIndex);
+        moneyBar.setPosition(pos.x, pos.y + 55);  // Below avatar
       }
     });
 
@@ -581,11 +592,11 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Update button positions
-    this.playButton.setPosition(width / 2 - 80, height / 2 + 35);
-    this.playButtonText.setPosition(width / 2 - 80, height / 2 + 35);
+    this.playButton.setPosition(150, height - 150);
+    this.playButtonText.setPosition(150, height - 150);
 
-    this.passButton.setPosition(width / 2 + 80, height / 2 + 35);
-    this.passButtonText.setPosition(width / 2 + 80, height / 2 + 35);
+    this.passButton.setPosition(width - 150, height - 150);
+    this.passButtonText.setPosition(width - 150, height - 150);
   }
 
   private handleResize(): void {
