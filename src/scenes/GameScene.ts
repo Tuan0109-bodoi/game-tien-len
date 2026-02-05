@@ -173,19 +173,38 @@ export class GameScene extends Phaser.Scene {
       } else {
         // ===== OPPONENTS (PLAYERS 1,2,3) - SMALL SLEEVE STACK =====
         const smallScale = 0.20; // Very small - just icon size
-        const stackX = avatarPos.x + 50;
+        const stackDistance = 100; // Distance from avatar center to card stack
+
+        // Determine stack position based on player index
+        let stackX: number;
+        let offsetDirection: number; // For vertical offset direction
+
+        if (index === 1) {
+          // Player 1 (right side) - cards on LEFT of avatar
+          stackX = avatarPos.x - stackDistance;
+          offsetDirection = 1; // Cards stack downward
+        } else if (index === 3) {
+          // Player 3 (left side) - cards on RIGHT of avatar
+          stackX = avatarPos.x + stackDistance;
+          offsetDirection = 1; // Cards stack downward
+        } else {
+          // Player 2 (top) - cards below avatar
+          stackX = avatarPos.x;
+          offsetDirection = 1; // Cards stack downward
+        }
+
         const stackY = avatarPos.y;
 
         // Display small sleeve stack
         hand.forEach((card, cardIndex) => {
-          const offsetY = cardIndex * 2; // Minimal offset
+          const offsetY = cardIndex * 2 * offsetDirection; // Minimal offset
           const sprite = this.physics.add.sprite(
             stackX,
             stackY + offsetY,
             'card-back'
           );
           sprite.setScale(smallScale);
-          sprite.setDepth(cardIndex + 10);
+          sprite.setDepth(cardIndex + 5); // Lower depth than avatar (100+)
           // NOT interactive - read-only display
 
           sprites.push(sprite);
@@ -351,7 +370,7 @@ export class GameScene extends Phaser.Scene {
     const height = this.cameras.main.height;
 
     switch (index) {
-      case 0: return { x: 80, y: height - 80 };  // Bottom-left corner
+      case 0: return { x: 80, y: height - 120 };  // Bottom-left corner, pushed up for card space
       case 1: return { x: width - 80, y: height / 2 };  // Right middle
       case 2: return { x: width / 2, y: 80 };  // Top center
       case 3: return { x: 80, y: height / 2 };  // Left middle
@@ -573,12 +592,28 @@ export class GameScene extends Phaser.Scene {
         });
       } else {
         // ===== OPPONENTS: UPDATE SLEEVE STACK POSITIONS =====
-        const stackX = avatarPos.x + 40;
+        const stackDistance = 100; // Distance from avatar center to card stack
+
+        // Determine stack position based on player index
+        let stackX: number;
+
+        if (playerIndex === 1) {
+          // Player 1 (right side) - cards on LEFT of avatar
+          stackX = avatarPos.x - stackDistance;
+        } else if (playerIndex === 3) {
+          // Player 3 (left side) - cards on RIGHT of avatar
+          stackX = avatarPos.x + stackDistance;
+        } else {
+          // Player 2 (top) - cards below avatar
+          stackX = avatarPos.x;
+        }
+
         const stackY = avatarPos.y;
 
         sprites.forEach((sprite, cardIndex) => {
           const offsetY = cardIndex * 2;
           sprite.setPosition(stackX, stackY + offsetY);
+          sprite.setDepth(cardIndex + 5); // Lower depth than avatar (100+)
         });
       }
 
