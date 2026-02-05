@@ -31,12 +31,12 @@ export class CurvedCardLayout {
 
     // Linear fan-out layout for Player 0
     const centerX = screenWidth / 2;
-    const centerY = screenHeight - 120; // Push cards lower to avoid board
+    const centerY = screenHeight - 90; // Push cards to very bottom
 
     // Calculate spacing between cards
-    const maxSpacing = 18;
-    const minSpacing = 8;
-    const availableWidth = screenWidth - 300; // More margin on sides
+    const maxSpacing = 20;
+    const minSpacing = 10;
+    const availableWidth = screenWidth - 250; // More margin on sides
     const spacing = Math.max(minSpacing, Math.min(maxSpacing, availableWidth / numCards));
 
     // Calculate x position for this card
