@@ -402,7 +402,7 @@ export class GameScene extends Phaser.Scene {
     this.passButton.setInteractive();
     this.passButton.setDepth(100);
 
-    this.passButtonText = this.add.text(passBtnX, passBtnY, 'PASS', {
+    this.passButtonText = this.add.text(passBtnX, passBtnY, 'BỎ', {
       fontSize: '18px',
       color: '#ffffff',
       fontStyle: 'bold',
