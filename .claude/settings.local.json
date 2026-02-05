@@ -14,7 +14,10 @@
       "Bash(PORT=3000 npm run dev:*)",
       "Bash(npx http-server:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm start)",
+      "Bash(git push:*)"
     ]
   }
 }

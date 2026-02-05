@@ -68,10 +68,10 @@ export class GameScene extends Phaser.Scene {
     const height = this.cameras.main.height;
     const maxCards = 13;
     const padding = 200;  // More padding to avoid overlap
-    const minCardWidth = 20;
-    const maxCardWidth = 35;
-    const minCardHeight = 30;
-    const maxCardHeight = 50;
+    const minCardWidth = 40;  // Increased from 20
+    const maxCardWidth = 50;  // Increased from 35
+    const minCardHeight = 60;  // Increased from 30
+    const maxCardHeight = 75;  // Increased from 50
     const minSpacing = 5;
     const maxSpacing = 12;
 
@@ -123,39 +123,38 @@ export class GameScene extends Phaser.Scene {
     gameState.players.forEach((player, index) => {
       const hand = this.gameLogic.getPlayerHand(index);
       const sprites: Phaser.Physics.Arcade.Sprite[] = [];
+      const avatarSize = 65;
+      const avatarPos = this.getAvatarPosition(index);
 
-      // Calculate curved positions
-      const positions = CurvedCardLayout.calculateHandPositions({
-        playerIndex: index,
-        numCards: hand.length,
-        screenWidth: width,
-        screenHeight: height,
-        cardWidth: this.cardWidth,
-        cardHeight: this.cardHeight
-      });
+      if (index === 0) {
+        // ===== PLAYER 0 (HUMAN PLAYER) - FULL HAND DISPLAY =====
+        // Calculate linear positions
+        const positions = CurvedCardLayout.calculateHandPositions({
+          playerIndex: index,
+          numCards: hand.length,
+          screenWidth: width,
+          screenHeight: height,
+          cardWidth: this.cardWidth,
+          cardHeight: this.cardHeight
+        });
 
-      // Display cards
-      hand.forEach((card, cardIndex) => {
-        const pos = positions[cardIndex];
+        // Display full hand with card fronts
+        hand.forEach((card, cardIndex) => {
+          const pos = positions[cardIndex];
+          const texture = `card-${card.rank}-${card.suit}`;
 
-        // Determine texture: player 0 shows fronts, others show backs
-        const texture = index === 0
-          ? `card-${card.rank}-${card.suit}`
-          : 'card-back';
+          const baseCardWidth = 80;
+          const baseCardHeight = 120;
+          const scaleX = this.cardWidth / baseCardWidth;
+          const scaleY = this.cardHeight / baseCardHeight;
+          const scale = Math.min(scaleX, scaleY);
 
-        const baseCardWidth = 80;
-        const baseCardHeight = 120;
-        const scaleX = this.cardWidth / baseCardWidth;
-        const scaleY = this.cardHeight / baseCardHeight;
-        const scale = Math.min(scaleX, scaleY);
+          const sprite = this.physics.add.sprite(pos.x, pos.y, texture);
+          sprite.setScale(scale);
+          sprite.setAngle(pos.rotation);
+          sprite.setDepth(cardIndex + 10);
 
-        const sprite = this.physics.add.sprite(pos.x, pos.y, texture);
-        sprite.setScale(scale);
-        sprite.setAngle(pos.rotation);
-        sprite.setDepth(cardIndex + 10);
-
-        // Only make player 0 cards interactive
-        if (index === 0) {
+          // Make cards interactive
           sprite.setInteractive();
           sprite.setData('originalY', pos.y);
           sprite.setData('originalX', pos.x);
@@ -165,18 +164,38 @@ export class GameScene extends Phaser.Scene {
 
           sprite.on('pointerdown', () => this.selectCard(card, sprite));
           this.setupCardHoverEffects(sprite, pos);
-        }
 
-        sprites.push(sprite);
-        this.cardSprites.set(card.id, sprite);
-      });
+          sprites.push(sprite);
+          this.cardSprites.set(card.id, sprite);
+        });
 
-      this.playerHands.set(index, sprites);
+        this.playerHands.set(index, sprites);
+      } else {
+        // ===== OPPONENTS (PLAYERS 1,2,3) - SMALL SLEEVE STACK =====
+        const smallScale = 0.15; // ~12px width for sleeves
+        const stackX = avatarPos.x + 40;
+        const stackY = avatarPos.y;
 
-      // Create avatar
-      const avatarSize = 65;
-      const avatarPos = this.getAvatarPosition(index);
+        // Display small sleeve stack
+        hand.forEach((card, cardIndex) => {
+          const offsetY = cardIndex * 2; // Slight vertical offset for stack effect
+          const sprite = this.physics.add.sprite(
+            stackX,
+            stackY + offsetY,
+            'card-back'
+          );
+          sprite.setScale(smallScale);
+          sprite.setDepth(cardIndex + 10);
+          // NOT interactive - read-only display
 
+          sprites.push(sprite);
+          this.cardSprites.set(card.id, sprite);
+        });
+
+        this.playerHands.set(index, sprites);
+      }
+
+      // ===== CREATE AVATAR (FOR ALL PLAYERS) =====
       // Glow circle (for active player - initially hidden)
       const glowCircle = this.add.circle(avatarPos.x, avatarPos.y, avatarSize / 2 + 10, 0xFFFF00, 0);
       glowCircle.setDepth(99);
@@ -526,50 +545,59 @@ export class GameScene extends Phaser.Scene {
     gameState.players.forEach((player, playerIndex) => {
       const hand = this.gameLogic.getPlayerHand(playerIndex);
       const sprites = this.playerHands.get(playerIndex) || [];
+      const avatarPos = this.getAvatarPosition(playerIndex);
 
-      // Recalculate curved positions
-      const positions = CurvedCardLayout.calculateHandPositions({
-        playerIndex,
-        numCards: hand.length,
-        screenWidth: width,
-        screenHeight: height,
-        cardWidth: this.cardWidth,
-        cardHeight: this.cardHeight
-      });
+      if (playerIndex === 0) {
+        // ===== PLAYER 0: RECALCULATE LINEAR POSITIONS =====
+        const positions = CurvedCardLayout.calculateHandPositions({
+          playerIndex,
+          numCards: hand.length,
+          screenWidth: width,
+          screenHeight: height,
+          cardWidth: this.cardWidth,
+          cardHeight: this.cardHeight
+        });
 
-      sprites.forEach((sprite, cardIndex) => {
-        const pos = positions[cardIndex];
+        sprites.forEach((sprite, cardIndex) => {
+          const pos = positions[cardIndex];
 
-        sprite.setData('originalX', pos.x);
-        sprite.setData('originalY', pos.y);
-        sprite.setData('originalRotation', pos.rotation);
+          sprite.setData('originalX', pos.x);
+          sprite.setData('originalY', pos.y);
+          sprite.setData('originalRotation', pos.rotation);
 
-        const cardId = sprite.getData('cardId');
-        if (!this.selectedCards.has(cardId)) {
-          sprite.setPosition(pos.x, pos.y);
-          sprite.setAngle(pos.rotation);
-        }
-      });
+          const cardId = sprite.getData('cardId');
+          if (!this.selectedCards.has(cardId)) {
+            sprite.setPosition(pos.x, pos.y);
+            sprite.setAngle(pos.rotation);
+          }
+        });
+      } else {
+        // ===== OPPONENTS: UPDATE SLEEVE STACK POSITIONS =====
+        const stackX = avatarPos.x + 40;
+        const stackY = avatarPos.y;
+
+        sprites.forEach((sprite, cardIndex) => {
+          const offsetY = cardIndex * 2;
+          sprite.setPosition(stackX, stackY + offsetY);
+        });
+      }
 
       const nameText = this.playerNameTexts.get(playerIndex);
       if (nameText) {
-        const pos = this.getAvatarPosition(playerIndex);
-        nameText.setPosition(pos.x, pos.y - 40);  // Above avatar
+        nameText.setPosition(avatarPos.x, avatarPos.y - 40);  // Above avatar
       }
 
       // Update card count text
       const cardCountText = this.playerCardCountTexts.get(playerIndex);
       if (cardCountText) {
-        const pos = this.getAvatarPosition(playerIndex);
-        cardCountText.setPosition(pos.x + 35, pos.y - 35);
+        cardCountText.setPosition(avatarPos.x + 35, avatarPos.y - 35);
         cardCountText.setText(hand.length.toString());
       }
 
       // Update money bar position
       const moneyBar = this.playerMoneyBars.get(playerIndex);
       if (moneyBar) {
-        const pos = this.getAvatarPosition(playerIndex);
-        moneyBar.setPosition(pos.x, pos.y + 55);  // Below avatar
+        moneyBar.setPosition(avatarPos.x, avatarPos.y + 55);  // Below avatar
       }
     });
 
@@ -584,6 +612,7 @@ export class GameScene extends Phaser.Scene {
       }
 
       // Redraw graphics at new position
+      const gameState = this.gameLogic.getGameState();
       const isActive = gameState.currentPlayerIndex === index;
 
       avatar.border.clear();
