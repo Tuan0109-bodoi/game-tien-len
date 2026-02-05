@@ -174,6 +174,7 @@ export class GameScene extends Phaser.Scene {
         // ===== OPPONENTS (PLAYERS 1,2,3) - SMALL SLEEVE STACK =====
         const smallScale = 0.20; // Very small - just icon size
         const stackDistance = 100; // Distance from avatar center to card stack
+        const visibleCards = 2; // Only show top 2 cards
 
         // Determine stack position based on player index
         let stackX: number;
@@ -195,20 +196,23 @@ export class GameScene extends Phaser.Scene {
 
         const stackY = avatarPos.y;
 
-        // Display small sleeve stack
+        // Display only top visible cards (rest are hidden)
         hand.forEach((card, cardIndex) => {
-          const offsetY = cardIndex * 2 * offsetDirection; // Minimal offset
-          const sprite = this.physics.add.sprite(
-            stackX,
-            stackY + offsetY,
-            'card-back'
-          );
-          sprite.setScale(smallScale);
-          sprite.setDepth(cardIndex + 5); // Lower depth than avatar (100+)
-          // NOT interactive - read-only display
+          // Only show top 2 cards, rest are hidden behind
+          if (cardIndex < visibleCards) {
+            const offsetY = cardIndex * 2 * offsetDirection; // Minimal offset
+            const sprite = this.physics.add.sprite(
+              stackX,
+              stackY + offsetY,
+              'card-back'
+            );
+            sprite.setScale(smallScale);
+            sprite.setDepth(cardIndex + 5); // Lower depth than avatar (100+)
+            // NOT interactive - read-only display
 
-          sprites.push(sprite);
-          this.cardSprites.set(card.id, sprite);
+            sprites.push(sprite);
+            this.cardSprites.set(card.id, sprite);
+          }
         });
 
         this.playerHands.set(index, sprites);
