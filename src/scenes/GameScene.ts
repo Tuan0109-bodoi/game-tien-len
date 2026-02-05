@@ -172,31 +172,26 @@ export class GameScene extends Phaser.Scene {
         this.playerHands.set(index, sprites);
       } else if (index === 2) {
         // ===== PLAYER 2 (TOP - OPPONENT) - FULL HAND DISPLAY WITH SLEEVES =====
-        // Calculate linear positions (same as Player 0 but at top)
-        const positions = CurvedCardLayout.calculateHandPositions({
-          playerIndex: 0, // Use Player 0 layout logic
-          numCards: hand.length,
-          screenWidth: width,
-          screenHeight: height,
-          cardWidth: this.cardWidth,
-          cardHeight: this.cardHeight
-        });
+        // Calculate linear positions for all 13 cards at top
+        const topY = 80; // Near top of screen
+        const centerX = width / 2;
+        const numCards = hand.length;
 
-        // Display full hand with sleeves (card backs)
+        // Calculate spacing to fit all 13 cards
+        const cardSpacing = Math.max(8, Math.min(18, (width - 200) / numCards));
+        const totalWidth = (numCards - 1) * cardSpacing;
+        const startX = centerX - totalWidth / 2;
+
+        // Display full hand with sleeves (card backs) - smaller scale
         hand.forEach((card, cardIndex) => {
-          const pos = positions[cardIndex];
+          const x = startX + cardIndex * cardSpacing;
 
-          const baseCardWidth = 80;
-          const baseCardHeight = 120;
-          const scaleX = this.cardWidth / baseCardWidth;
-          const scaleY = this.cardHeight / baseCardHeight;
-          const scale = Math.min(scaleX, scaleY);
+          // Smaller scale for Player 2 cards (about 60% of Player 0)
+          const smallerScale = 0.12; // Smaller than Player 0
 
-          // Position at top instead of bottom
-          const topY = 100; // Near top of screen
-          const sprite = this.physics.add.sprite(pos.x, topY, 'card-back');
-          sprite.setScale(scale);
-          sprite.setAngle(pos.rotation);
+          const sprite = this.physics.add.sprite(x, topY, 'card-back');
+          sprite.setScale(smallerScale);
+          sprite.setAngle(0); // No rotation
           sprite.setDepth(cardIndex + 10);
           // NOT interactive - read-only display
 
@@ -407,7 +402,7 @@ export class GameScene extends Phaser.Scene {
     switch (index) {
       case 0: return { x: 80, y: height - 120 };  // Bottom-left corner, pushed up for card space
       case 1: return { x: width - 80, y: height / 2 };  // Right middle
-      case 2: return { x: width - 80, y: 80 };  // Top center
+      case 2: return { x: 80, y: 80 };  // Top left (moved from right to left)
       case 3: return { x: 80, y: height / 2 };  // Left middle
       default: return { x: 0, y: 0 };
     }
@@ -657,21 +652,19 @@ export class GameScene extends Phaser.Scene {
         });
       } else if (playerIndex === 2) {
         // ===== PLAYER 2: RECALCULATE LINEAR POSITIONS (TOP WITH SLEEVES) =====
-        const positions = CurvedCardLayout.calculateHandPositions({
-          playerIndex: 0, // Use Player 0 layout logic
-          numCards: hand.length,
-          screenWidth: width,
-          screenHeight: height,
-          cardWidth: this.cardWidth,
-          cardHeight: this.cardHeight
-        });
+        const topY = 80; // Near top of screen
+        const centerX = width / 2;
+        const numCards = hand.length;
 
-        const topY = 100; // Near top of screen
+        // Calculate spacing to fit all 13 cards
+        const cardSpacing = Math.max(8, Math.min(18, (width - 200) / numCards));
+        const totalWidth = (numCards - 1) * cardSpacing;
+        const startX = centerX - totalWidth / 2;
 
         sprites.forEach((sprite, cardIndex) => {
-          const pos = positions[cardIndex];
-          sprite.setPosition(pos.x, topY);
-          sprite.setAngle(pos.rotation);
+          const x = startX + cardIndex * cardSpacing;
+          sprite.setPosition(x, topY);
+          sprite.setAngle(0);
           sprite.setDepth(cardIndex + 10);
         });
       } else {
