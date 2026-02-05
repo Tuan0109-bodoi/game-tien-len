@@ -407,24 +407,22 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Position buttons in center above player hand
-    const buttonCenterX = width / 2;
-    const buttonCenterY = height - 50; // Above the card hand
+    // Position buttons on right side at bottom
+    const buttonRightX = width - 100;
+    const playBtnY = height - 150;
+    const passBtnY = height - 80;
 
-    // Play button - Green (center-left, above hand)
-    const playBtnX = buttonCenterX - 80;
-    const playBtnY = buttonCenterY;
-
-    this.playButton = this.add.rectangle(playBtnX, playBtnY, 140, 50, 0x27AE60);
+    // Play button - Green (right side, bottom area)
+    this.playButton = this.add.rectangle(buttonRightX, playBtnY, 140, 50, 0x27AE60);
     this.playButton.setInteractive();
     this.playButton.setDepth(100);
     // Add rounded corners effect with graphics
     const playBtnGraphics = this.add.graphics();
     playBtnGraphics.lineStyle(2, 0x1E8449, 1); // Darker green border
-    playBtnGraphics.strokeRoundedRect(playBtnX - 70, playBtnY - 25, 140, 50, 10);
+    playBtnGraphics.strokeRoundedRect(buttonRightX - 70, playBtnY - 25, 140, 50, 10);
     playBtnGraphics.setDepth(99);
 
-    this.playButtonText = this.add.text(playBtnX, playBtnY, 'ĐÁNH', {
+    this.playButtonText = this.add.text(buttonRightX, playBtnY, 'ĐÁNH', {
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -437,30 +435,27 @@ export class GameScene extends Phaser.Scene {
       this.playButton.setFillStyle(0x2ECC71);
       playBtnGraphics.lineStyle(3, 0x27AE60, 1); // Brighter border on hover
       playBtnGraphics.clear();
-      playBtnGraphics.strokeRoundedRect(playBtnX - 70, playBtnY - 25, 140, 50, 10);
+      playBtnGraphics.strokeRoundedRect(buttonRightX - 70, playBtnY - 25, 140, 50, 10);
     });
     this.playButton.on('pointerout', () => {
       this.playButton.setFillStyle(0x27AE60);
       playBtnGraphics.lineStyle(2, 0x1E8449, 1);
       playBtnGraphics.clear();
-      playBtnGraphics.strokeRoundedRect(playBtnX - 70, playBtnY - 25, 140, 50, 10);
+      playBtnGraphics.strokeRoundedRect(buttonRightX - 70, playBtnY - 25, 140, 50, 10);
     });
     this.playButton.on('pointerdown', () => this.playSelectedCards());
 
-    // Pass button - Red (center-right, above hand)
-    const passBtnX = buttonCenterX + 80;
-    const passBtnY = buttonCenterY;
-
-    this.passButton = this.add.rectangle(passBtnX, passBtnY, 140, 50, 0xC0392B);
+    // Pass button - Red (right side, bottom area, below play button)
+    this.passButton = this.add.rectangle(buttonRightX, passBtnY, 140, 50, 0xC0392B);
     this.passButton.setInteractive();
     this.passButton.setDepth(100);
     // Add rounded corners effect with graphics
     const passBtnGraphics = this.add.graphics();
     passBtnGraphics.lineStyle(2, 0x922B21, 1); // Darker red border
-    passBtnGraphics.strokeRoundedRect(passBtnX - 70, passBtnY - 25, 140, 50, 10);
+    passBtnGraphics.strokeRoundedRect(buttonRightX - 70, passBtnY - 25, 140, 50, 10);
     passBtnGraphics.setDepth(99);
 
-    this.passButtonText = this.add.text(passBtnX, passBtnY, 'BỎ', {
+    this.passButtonText = this.add.text(buttonRightX, passBtnY, 'BỎ', {
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -473,13 +468,13 @@ export class GameScene extends Phaser.Scene {
       this.passButton.setFillStyle(0xE74C3C);
       passBtnGraphics.lineStyle(3, 0xC0392B, 1); // Brighter border on hover
       passBtnGraphics.clear();
-      passBtnGraphics.strokeRoundedRect(passBtnX - 70, passBtnY - 25, 140, 50, 10);
+      passBtnGraphics.strokeRoundedRect(buttonRightX - 70, passBtnY - 25, 140, 50, 10);
     });
     this.passButton.on('pointerout', () => {
       this.passButton.setFillStyle(0xC0392B);
       passBtnGraphics.lineStyle(2, 0x922B21, 1);
       passBtnGraphics.clear();
-      passBtnGraphics.strokeRoundedRect(passBtnX - 70, passBtnY - 25, 140, 50, 10);
+      passBtnGraphics.strokeRoundedRect(buttonRightX - 70, passBtnY - 25, 140, 50, 10);
     });
     this.passButton.on('pointerdown', () => this.passMove());
 
@@ -690,17 +685,16 @@ export class GameScene extends Phaser.Scene {
       avatar.border.strokeCircle(pos.x, pos.y, avatarSize / 2);
     });
 
-    // Update button positions (center above hand)
-    const buttonCenterX = width / 2;
-    const buttonCenterY = height - 50;
-    const playBtnX = buttonCenterX - 80;
-    const passBtnX = buttonCenterX + 80;
+    // Update button positions (right side at bottom)
+    const buttonRightX = width - 100;
+    const playBtnY = height - 150;
+    const passBtnY = height - 80;
 
-    this.playButton.setPosition(playBtnX, buttonCenterY);
-    this.playButtonText.setPosition(playBtnX, buttonCenterY);
+    this.playButton.setPosition(buttonRightX, playBtnY);
+    this.playButtonText.setPosition(buttonRightX, playBtnY);
 
-    this.passButton.setPosition(passBtnX, buttonCenterY);
-    this.passButtonText.setPosition(passBtnX, buttonCenterY);
+    this.passButton.setPosition(buttonRightX, passBtnY);
+    this.passButtonText.setPosition(buttonRightX, passBtnY);
   }
 
   private handleResize(): void {
