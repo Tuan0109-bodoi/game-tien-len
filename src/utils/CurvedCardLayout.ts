@@ -15,8 +15,8 @@ export interface CardPosition {
 
 export class CurvedCardLayout {
   /**
-   * Calculate fan-out positions for Player 0's hand
-   * Cards arranged in a curved fan pattern below the avatar
+   * Calculate linear positions for Player 0's hand
+   * Cards arranged horizontally in a straight line below the avatar
    */
   public static calculateCardPosition(
     config: CurveConfig,
@@ -29,7 +29,7 @@ export class CurvedCardLayout {
       return { x: 0, y: 0, rotation: 0 };
     }
 
-    // Fan-out layout for Player 0 with rotation
+    // Linear horizontal layout for Player 0
     const centerX = screenWidth / 2;
     const centerY = screenHeight - 100; // Push cards to very bottom
 
@@ -44,16 +44,10 @@ export class CurvedCardLayout {
     const startX = centerX - totalWidth / 2;
     const x = startX + cardIndex * spacing;
 
-    // Calculate rotation for fan-out effect
-    // Cards on left side rotate counter-clockwise, cards on right rotate clockwise
-    const maxRotation = 25; // Maximum rotation in degrees
-    const cardPosition = cardIndex - (numCards - 1) / 2; // Position relative to center
-    const rotation = (cardPosition / (numCards - 1)) * maxRotation * 2 - maxRotation;
-
     return {
       x: x,
       y: centerY,
-      rotation: rotation // Cards fan out with rotation
+      rotation: 0 // Cards stay upright - no rotation
     };
   }
 
