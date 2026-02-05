@@ -22,6 +22,7 @@ export class CurvedCardLayout {
     config: CurveConfig,
     cardIndex: number
   ): CardPosition {
+    
     const { playerIndex, numCards, screenWidth, screenHeight } = config;
 
     // Only calculate positions for Player 0 (human player)

@@ -402,7 +402,7 @@ export class GameScene extends Phaser.Scene {
     switch (index) {
       case 0: return { x: 80, y: height - 120 };  // Bottom-left corner, pushed up for card space
       case 1: return { x: width - 80, y: height / 2 };  // Right middle
-      case 2: return { x: 80, y: 80 };  // Top left (moved from right to left)
+      case 2: return { x: width - 80, y: 80 };  // Top right
       case 3: return { x: 80, y: height / 2 };  // Left middle
       default: return { x: 0, y: 0 };
     }
