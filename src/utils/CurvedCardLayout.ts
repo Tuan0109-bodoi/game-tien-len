@@ -15,8 +15,8 @@ export interface CardPosition {
 
 export class CurvedCardLayout {
   /**
-   * Calculate linear fan-out positions for Player 0's hand
-   * Cards arranged horizontally below the avatar
+   * Calculate fan-out positions for Player 0's hand
+   * Cards arranged in a curved fan pattern below the avatar
    */
   public static calculateCardPosition(
     config: CurveConfig,
@@ -29,14 +29,14 @@ export class CurvedCardLayout {
       return { x: 0, y: 0, rotation: 0 };
     }
 
-    // Linear fan-out layout for Player 0
+    // Fan-out layout for Player 0 with rotation
     const centerX = screenWidth / 2;
-    const centerY = screenHeight - 90; // Push cards to very bottom
+    const centerY = screenHeight - 100; // Push cards to very bottom
 
-    // Calculate spacing between cards
-    const maxSpacing = 20;
-    const minSpacing = 10;
-    const availableWidth = screenWidth - 250; // More margin on sides
+    // Calculate spacing between cards - wider spread
+    const maxSpacing = 25;
+    const minSpacing = 12;
+    const availableWidth = screenWidth - 200; // Less margin on sides for wider spread
     const spacing = Math.max(minSpacing, Math.min(maxSpacing, availableWidth / numCards));
 
     // Calculate x position for this card
@@ -44,10 +44,16 @@ export class CurvedCardLayout {
     const startX = centerX - totalWidth / 2;
     const x = startX + cardIndex * spacing;
 
+    // Calculate rotation for fan-out effect
+    // Cards on left side rotate counter-clockwise, cards on right rotate clockwise
+    const maxRotation = 25; // Maximum rotation in degrees
+    const cardPosition = cardIndex - (numCards - 1) / 2; // Position relative to center
+    const rotation = (cardPosition / (numCards - 1)) * maxRotation * 2 - maxRotation;
+
     return {
       x: x,
       y: centerY,
-      rotation: 0 // Cards stay upright
+      rotation: rotation // Cards fan out with rotation
     };
   }
 
