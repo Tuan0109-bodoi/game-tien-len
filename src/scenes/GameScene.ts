@@ -127,7 +127,7 @@ export class GameScene extends Phaser.Scene {
       const avatarPos = this.getAvatarPosition(index);
 
       if (index === 0) {
-        // ===== PLAYER 0 (HUMAN PLAYER) - FULL HAND DISPLAY =====
+        // ===== PLAYER 0 (HUMAN PLAYER) - FULL HAND DISPLAY WITH CARD FRONTS =====
         // Calculate linear positions
         const positions = CurvedCardLayout.calculateHandPositions({
           playerIndex: index,
@@ -170,8 +170,43 @@ export class GameScene extends Phaser.Scene {
         });
 
         this.playerHands.set(index, sprites);
+      } else if (index === 2) {
+        // ===== PLAYER 2 (TOP - OPPONENT) - FULL HAND DISPLAY WITH SLEEVES =====
+        // Calculate linear positions (same as Player 0 but at top)
+        const positions = CurvedCardLayout.calculateHandPositions({
+          playerIndex: 0, // Use Player 0 layout logic
+          numCards: hand.length,
+          screenWidth: width,
+          screenHeight: height,
+          cardWidth: this.cardWidth,
+          cardHeight: this.cardHeight
+        });
+
+        // Display full hand with sleeves (card backs)
+        hand.forEach((card, cardIndex) => {
+          const pos = positions[cardIndex];
+
+          const baseCardWidth = 80;
+          const baseCardHeight = 120;
+          const scaleX = this.cardWidth / baseCardWidth;
+          const scaleY = this.cardHeight / baseCardHeight;
+          const scale = Math.min(scaleX, scaleY);
+
+          // Position at top instead of bottom
+          const topY = 100; // Near top of screen
+          const sprite = this.physics.add.sprite(pos.x, topY, 'card-back');
+          sprite.setScale(scale);
+          sprite.setAngle(pos.rotation);
+          sprite.setDepth(cardIndex + 10);
+          // NOT interactive - read-only display
+
+          sprites.push(sprite);
+          this.cardSprites.set(card.id, sprite);
+        });
+
+        this.playerHands.set(index, sprites);
       } else {
-        // ===== OPPONENTS (PLAYERS 1,2,3) - SMALL SLEEVE STACK =====
+        // ===== OPPONENTS (PLAYERS 1,3) - SMALL SLEEVE STACK =====
         const smallScale = 0.20; // Very small - just icon size
         const stackDistance = 100; // Distance from avatar center to card stack
         const visibleCards = 2; // Only show top 2 cards
@@ -184,13 +219,9 @@ export class GameScene extends Phaser.Scene {
           // Player 1 (right side) - cards on LEFT of avatar
           stackX = avatarPos.x - stackDistance;
           offsetDirection = 1; // Cards stack downward
-        } else if (index === 3) {
+        } else {
           // Player 3 (left side) - cards on RIGHT of avatar
           stackX = avatarPos.x + stackDistance;
-          offsetDirection = 1; // Cards stack downward
-        } else {
-          // Player 2 (top) - cards below avatar
-          stackX = avatarPos.x;
           offsetDirection = 1; // Cards stack downward
         }
 
@@ -624,8 +655,27 @@ export class GameScene extends Phaser.Scene {
             sprite.setAngle(pos.rotation);
           }
         });
+      } else if (playerIndex === 2) {
+        // ===== PLAYER 2: RECALCULATE LINEAR POSITIONS (TOP WITH SLEEVES) =====
+        const positions = CurvedCardLayout.calculateHandPositions({
+          playerIndex: 0, // Use Player 0 layout logic
+          numCards: hand.length,
+          screenWidth: width,
+          screenHeight: height,
+          cardWidth: this.cardWidth,
+          cardHeight: this.cardHeight
+        });
+
+        const topY = 100; // Near top of screen
+
+        sprites.forEach((sprite, cardIndex) => {
+          const pos = positions[cardIndex];
+          sprite.setPosition(pos.x, topY);
+          sprite.setAngle(pos.rotation);
+          sprite.setDepth(cardIndex + 10);
+        });
       } else {
-        // ===== OPPONENTS (1,2,3): UPDATE SLEEVE STACK POSITIONS =====
+        // ===== OPPONENTS (1,3): UPDATE SLEEVE STACK POSITIONS =====
         const stackDistance = 100; // Distance from avatar center to card stack
 
         // Determine stack position based on player index
@@ -634,12 +684,9 @@ export class GameScene extends Phaser.Scene {
         if (playerIndex === 1) {
           // Player 1 (right side) - cards on LEFT of avatar
           stackX = avatarPos.x - stackDistance;
-        } else if (playerIndex === 3) {
+        } else {
           // Player 3 (left side) - cards on RIGHT of avatar
           stackX = avatarPos.x + stackDistance;
-        } else {
-          // Player 2 (top) - cards below avatar
-          stackX = avatarPos.x;
         }
 
         const stackY = avatarPos.y;
