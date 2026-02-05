@@ -1,5 +1,3 @@
-import Phaser from 'phaser';
-
 export interface CurveConfig {
   playerIndex: number;
   numCards: number;
@@ -33,12 +31,12 @@ export class CurvedCardLayout {
 
     // Linear fan-out layout for Player 0
     const centerX = screenWidth / 2;
-    const centerY = screenHeight - 150; // Below avatar
+    const centerY = screenHeight - 120; // Push cards lower to avoid board
 
     // Calculate spacing between cards
-    const maxSpacing = 15;
-    const minSpacing = 5;
-    const availableWidth = screenWidth - 200;
+    const maxSpacing = 18;
+    const minSpacing = 8;
+    const availableWidth = screenWidth - 300; // More margin on sides
     const spacing = Math.max(minSpacing, Math.min(maxSpacing, availableWidth / numCards));
 
     // Calculate x position for this card

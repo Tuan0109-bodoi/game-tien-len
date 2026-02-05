@@ -68,10 +68,10 @@ export class GameScene extends Phaser.Scene {
     const height = this.cameras.main.height;
     const maxCards = 13;
     const padding = 200;  // More padding to avoid overlap
-    const minCardWidth = 40;  // Increased from 20
-    const maxCardWidth = 50;  // Increased from 35
-    const minCardHeight = 60;  // Increased from 30
-    const maxCardHeight = 75;  // Increased from 50
+    const minCardWidth = 25;  // Optimized size
+    const maxCardWidth = 35;  // Optimized size
+    const minCardHeight = 37;  // Optimized size
+    const maxCardHeight = 52;  // Optimized size
     const minSpacing = 5;
     const maxSpacing = 12;
 
@@ -172,13 +172,13 @@ export class GameScene extends Phaser.Scene {
         this.playerHands.set(index, sprites);
       } else {
         // ===== OPPONENTS (PLAYERS 1,2,3) - SMALL SLEEVE STACK =====
-        const smallScale = 0.15; // ~12px width for sleeves
-        const stackX = avatarPos.x + 40;
+        const smallScale = 0.25; // Increased from 0.15 (~20px width for sleeves)
+        const stackX = avatarPos.x + 45;
         const stackY = avatarPos.y;
 
         // Display small sleeve stack
         hand.forEach((card, cardIndex) => {
-          const offsetY = cardIndex * 2; // Slight vertical offset for stack effect
+          const offsetY = cardIndex * 3; // Increased offset for better visibility
           const sprite = this.physics.add.sprite(
             stackX,
             stackY + offsetY,
