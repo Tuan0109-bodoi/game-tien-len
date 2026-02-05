@@ -24,14 +24,24 @@ export class CurvedCardLayout {
   ): CardPosition {
     const { playerIndex, numCards, screenWidth, screenHeight } = config;
 
-    // Only calculate positions for Player 0 (human player)
-    if (playerIndex !== 0) {
+    // Only calculate positions for Player 0 and Player 2
+    if (playerIndex !== 0 && playerIndex !== 2) {
       return { x: 0, y: 0, rotation: 0 };
     }
 
-    // Linear horizontal layout for Player 0
-    const centerX = screenWidth / 2;
-    const centerY = screenHeight - 100; // Push cards to very bottom
+    // Linear horizontal layout
+    let centerX: number;
+    let centerY: number;
+
+    if (playerIndex === 0) {
+      // Player 0 (bottom) - cards below avatar
+      centerX = screenWidth / 2;
+      centerY = screenHeight - 100; // Push cards to very bottom
+    } else {
+      // Player 2 (top) - cards above avatar
+      centerX = screenWidth / 2;
+      centerY = 100; // Push cards to very top
+    }
 
     // Calculate spacing between cards - wider spread
     const maxSpacing = 25;
@@ -53,14 +63,14 @@ export class CurvedCardLayout {
 
   /**
    * Calculate all positions for a player's hand
-   * For Player 0: returns linear fan-out positions
+   * For Player 0 and 2: returns linear positions
    * For others: returns empty array (not displaying full hands)
    */
   public static calculateHandPositions(config: CurveConfig): CardPosition[] {
     const positions: CardPosition[] = [];
 
-    // Only calculate positions for Player 0
-    if (config.playerIndex !== 0) {
+    // Only calculate positions for Player 0 and Player 2
+    if (config.playerIndex !== 0 && config.playerIndex !== 2) {
       return positions;
     }
 
