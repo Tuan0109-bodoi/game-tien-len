@@ -369,15 +369,15 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Play button - Green (bottom left, outside board)
-    const playBtnX = 150;
-    const playBtnY = height - 150;
+    // Play button - Green (bottom right, outside board)
+    const playBtnX = width - 150;
+    const playBtnY = height - 200;
 
     this.playButton = this.add.rectangle(playBtnX, playBtnY, 130, 45, 0x27AE60);
     this.playButton.setInteractive();
     this.playButton.setDepth(100);
 
-    this.playButtonText = this.add.text(playBtnX, playBtnY, 'PLAY', {
+    this.playButtonText = this.add.text(playBtnX, playBtnY, 'ĐÁNH', {
       fontSize: '18px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -396,7 +396,7 @@ export class GameScene extends Phaser.Scene {
 
     // Pass button - Red (bottom right, outside board)
     const passBtnX = width - 150;
-    const passBtnY = height - 150;
+    const passBtnY = height - 100;
 
     this.passButton = this.add.rectangle(passBtnX, passBtnY, 130, 45, 0xC0392B);
     this.passButton.setInteractive();
@@ -592,11 +592,11 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Update button positions
-    this.playButton.setPosition(150, height - 150);
-    this.playButtonText.setPosition(150, height - 150);
+    this.playButton.setPosition(width - 150, height - 200);
+    this.playButtonText.setPosition(width - 150, height - 200);
 
-    this.passButton.setPosition(width - 150, height - 150);
-    this.passButtonText.setPosition(width - 150, height - 150);
+    this.passButton.setPosition(width - 150, height - 100);
+    this.passButtonText.setPosition(width - 150, height - 100);
   }
 
   private handleResize(): void {
